@@ -1,0 +1,130 @@
+use std::str::FromStr;
+use crate::ast::{Ident, Type};
+use crate::VARS;
+
+grammar;
+
+match {
+    r"\s*" => {},
+    _
+}
+
+pub Stmt: Ident = {
+    <Stmt_1> ";;",
+};
+
+Stmt_1 : Ident = {
+    Assign_stmt,
+    <expr: Expr> => {
+        let mut tp = String::new();
+        tp = match expr{
+            Type::num(_) => String::from("int"),
+            Type::boolean(_) => "bool".to_string(),
+            Type::string(_) => "string".to_string(),
+        };
+        Ident{ name: String::from("it"), tp, val: expr}
+    }
+};
+
+Assign_stmt : Ident = {
+    "let" <id: Id> "=" <expr: Expr> => {
+        Ident { 
+            name: id,
+            tp : match expr{
+                Type::num(_) => String::from("int"),
+                Type::boolean(_) => "bool".to_string(),
+                Type::string(_) => "string".to_string(),
+            },
+            val : expr,
+        }
+    },
+};
+
+Id : String = {
+    r"[_a-zA-Z][_a-zA-Z0-9]*" => String::from(<>),
+};
+
+Expr : Type = {
+    NumExpr => Type::num(<>),
+    BoolExpr => Type::boolean(<>),
+    StrExpr => Type::string(<>),
+};
+
+NumExpr : i32 = {
+    <a:NumExpr> "+" <b:NumFactor> => a + b,
+    <a:NumExpr> "-" <b:NumFactor> => a - b,
+    NumFactor,
+};
+
+NumFactor: i32 = {
+    <a:NumFactor> "*" <b:NumTerm> => a * b,
+    <a:NumFactor> "/" <b:NumTerm> => a / b,
+    NumTerm,
+};
+
+NumTerm: i32 = {
+    "(" <NumExpr> ")",
+    NumConst,
+    <id: Id> => {
+        let mut value = 0;
+        unsafe {
+            let ln = VARS.len();
+            let mut i : usize = 0;
+
+            while i < ln {
+                if VARS[i].name == id   {
+                    if let Type::num(n) = VARS[i].val {
+                        value = n;
+                        break;
+                    }
+                    else {
+                        panic!("expect of type num but find type {}", VARS[i].tp);
+                    }
+                }
+                i = i + 1;
+            }
+
+            if i == ln {
+                panic!("unexpected variable {}", id);
+            }
+        }
+        value
+    },
+};
+
+NumConst: i32 = {
+    r"[-]?[0-9]+" => i32::from_str_radix(<>, 10).unwrap(),
+};
+
+BoolExpr: bool = {
+    <l: BoolExpr> "||" <r: BoolFactor> => l || r,
+    BoolFactor,
+};
+
+BoolFactor: bool = {
+    <l: BoolFactor> "&&" <r: BoolTerm> => l && r,
+    BoolTerm,
+};
+
+BoolTerm: bool = {
+    "!"<b: BoolTerm> => !b, 
+    "("<BoolExpr>")",
+    "true" => true,
+    "false" => false,
+};
+
+StrExpr: String = {
+    <l: StrExpr> "^" <r: StrFactor> => {
+        let mut ll = l.clone();
+        let mut rr = r.clone();
+        ll.remove(ll.len() - 1);
+        rr.remove(0);
+        ll.to_owned() + &rr
+    },
+    <StrFactor>,
+}
+
+StrFactor: String = {
+    "("<StrExpr>")",
+    r"'[^']*'" => String::from(<>),
+};

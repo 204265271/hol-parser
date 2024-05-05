@@ -1,0 +1,44 @@
+HOL-PARSER v0.0.0
+目前实现的功能有
+
+1. 三种基础类型: num(i32), boolean(bool), string(String)
+
+2. 三种基础类型分别对应的计算
+(a) num 优先级 ()  >  */  >  +-
+(1 + 2) * (3 * 4 + 5);;
+[ret]   val it : int = 51
+
+(b) bool 优先级 () > ! > && > ||
+    只有true和false两个值, 没有强制类型转换
+(true && !false) || false;;
+[ret]   val it : bool = true
+
+(c) string 优先级 () > ^ , ^是字符串连接, 目前的parser里面字符串的形式为 '...' 用单引号来引
+'asdf' ^ 'ZZZ+yyy';;
+[ret]   val it : string = 'asdfZZZ+yyy'
+
+3. 赋值操作 let, 所有类型均可重复赋值, 也可改变赋值的类型. parser可以对部分类型错误panic处理并给出错误提示(详见parser.lalrpop中的panic语句).
+(a) num类型可以赋值, 储存, 拿出来运算
+let num_a = -123;;
+[ret]   val num_a : int = -123
+let num_b = 124;;
+[ret]   val num_b : int = 124
+num_a + num_b;;
+[ret]   val it : int = 1
+let num_a = -1;;
+[ret]   val num_a : int = -1
+num_a * num_b;;
+[ret]   val it : int = -124
+
+(b) string和bool目前仅能赋值, 不能拿来运算
+let str = 'aaa';;
+[ret]   val str : string = 'aaa'
+let b = false;;
+[ret]   val b : bool = false
+
+4. 打算增加或完善的功能:
+(1) 所有类型均可拿来运算. [解决方法: 基于上下文进行类型推断]
+(2) 增加函数功能. [函数的储存方法: 记录参数个数n, 每个参数的类型(根据函数体进行推断), 函数参数类型(根据OCaml版的测试, 参数类型仅能是基础类型)并且用Vec储存]
+(3) 增加hol-light推断功能. [term的识别和以上具体的数值类似, 推断或需要交互]
+
+lzx 24.5.5
